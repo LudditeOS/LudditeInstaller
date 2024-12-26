@@ -1,0 +1,3 @@
+~/Library/Android/sdk/build-tools/35.0.0/apksigner sign --ks /Volumes/usbStickOli/Keystore/focuslauncherVue-release-key.jks /Users/oliverstaub/Downloads/ludditeinstaller.apk
+
+~/Library/Android/sdk/build-tools/35.0.0/apksigner verify /Users/oliverstaub/Downloads/ludditeinstaller.apk
