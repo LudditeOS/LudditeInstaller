@@ -1,0 +1,47 @@
+name: Android CI
+
+on:
+  push:
+    branches: ["main"]
+    tags:
+      - "*"
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Install zipalign
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zipalign
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build APK
+        run: ./gradlew assembleRelease
+
+      - name: Align APK
+        run: |
+          cd app/build/outputs/apk/release
+          zipalign -v -p 4 app-release-unsigned.apk ludditeinstaller.apk
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: app/build/outputs/apk/release/ludditeinstaller.apk
