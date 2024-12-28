@@ -13,29 +13,34 @@ import androidx.core.content.FileProvider;
 import java.io.File;
 
 public class AppStore {
+    private LogDisplay logDisplay;
     private static final String TAG = "AppStore";
     private static final String DOWNLOADS_DIR = "apk_downloads";
 
+    public AppStore(LogDisplay logDisplay) {
+        this.logDisplay = logDisplay;
+    }
+
     public void downloadAndInstallApk(Context context, String apkUrl, String fileName) {
-        Log.d(TAG, "Starting download and install process for: " + apkUrl);
+        logDisplay.log(TAG, "Starting download and install process for: " + apkUrl);
         Handler mainHandler = new Handler(context.getMainLooper());
 
         new Thread(() -> {
             try {
-                Log.d(TAG, "Starting download...");
+                logDisplay.log(TAG, "Starting download...");
                 Uri contentUri = downloadApk(context, apkUrl, fileName);
-                Log.d(TAG, "Download completed, contentUri: " + contentUri);
+                logDisplay.log(TAG, "Download completed, contentUri: " + contentUri);
 
                 if (contentUri != null) {
                     mainHandler.post(() -> {
-                        Log.d(TAG, "Initiating install process");
+                        logDisplay.log(TAG, "Initiating install process");
                         installApk(context, contentUri);
                     });
                 } else {
-                    Log.e(TAG, "Download failed - contentUri is null");
+                    logDisplay.log(TAG, "Download failed - contentUri is null");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error in download/install process", e);
+                logDisplay.log(TAG, "Error in download/install process: " + e.getMessage());
             }
         }).start();
     }
@@ -47,14 +52,14 @@ public class AppStore {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
             request.setTitle(fileName);
             request.setDestinationInExternalFilesDir(context, DOWNLOADS_DIR, fileName);
-            request.setAllowedOverMetered(true);  // Allow download over mobile network
-            request.setAllowedOverRoaming(true);  // Allow download when roaming
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(true);
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
 
             final long downloadId = dm.enqueue(request);
-            Log.d(TAG, "Download started with ID: " + downloadId);
+            logDisplay.log(TAG, "Download started with ID: " + downloadId);
 
-            int maxAttempts = 30; // 30 seconds timeout
+            int maxAttempts = 30;
             int attempts = 0;
 
             while (attempts < maxAttempts) {
@@ -69,7 +74,7 @@ public class AppStore {
                         int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
                         int reason = reasonIndex != -1 ? cursor.getInt(reasonIndex) : -1;
 
-                        Log.d(TAG, "Download status: " + getStatusString(status) +
+                        logDisplay.log(TAG, "Download status: " + getStatusString(status) +
                                 ", Reason: " + getReasonString(reason));
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
@@ -101,7 +106,7 @@ public class AppStore {
             throw new RuntimeException("Download timed out after " + maxAttempts + " seconds");
 
         } catch (Exception e) {
-            Log.e(TAG, "Error in downloadApk", e);
+            logDisplay.log(TAG, "Error in downloadApk: " + e.getMessage());
             throw e;
         }
     }
@@ -154,7 +159,7 @@ public class AppStore {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         } catch (Exception e) {
-            Log.e(TAG, "Error in installApk", e);
+            logDisplay.log(TAG, "Error in installApk: " + e.getMessage());
         }
     }
 }
