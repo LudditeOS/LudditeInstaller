@@ -34,7 +34,10 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo ${{ secrets.KEYSTORE_BASE64 }} | base64 -d > keystore.jks
+          echo ${{ secrets.KEYSTORE_BASE64 }} | base64 -d > $GITHUB_WORKSPACE/keystore.jks
+          # Debug: Check if file exists and show workspace
+          ls -la $GITHUB_WORKSPACE
+          echo "Keystore location: $GITHUB_WORKSPACE/keystore.jks"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -44,22 +47,30 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
         run: ./gradlew assembleRelease
 
-      - name: Align APK
+      - name: Align and Sign APK
         run: |
           cd app/build/outputs/apk/release
+          # Debug: Show current directory contents
+          pwd
+          ls -la
+          
+          # Align APK
           zipalign -v -p 4 app-release-unsigned.apk ludditeinstaller-aligned.apk
-
-      - name: Sign APK
-        run: |
-          apksigner sign --ks ../../../keystore.jks \
+          
+          # Debug: Verify aligned APK exists
+          ls -la ludditeinstaller-aligned.apk
+          
+          # Sign APK using absolute paths
+          apksigner sign --ks $GITHUB_WORKSPACE/keystore.jks \
             --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
             --ks-key-alias ${{ secrets.KEY_ALIAS }} \
             --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-            app/build/outputs/apk/release/ludditeinstaller-aligned.apk
+            ludditeinstaller-aligned.apk
 
       - name: Verify APK
         run: |
-          apksigner verify app/build/outputs/apk/release/ludditeinstaller-aligned.apk
+          cd app/build/outputs/apk/release
+          apksigner verify ludditeinstaller-aligned.apk
 
       - name: Release
         uses: softprops/action-gh-release@v2
