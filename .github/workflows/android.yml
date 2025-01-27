@@ -29,6 +29,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Decode Keystore
+        run: |
+          echo ${{ secrets.KEYSTORE_BASE64 }} | base64 -d > keystore.jks
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -40,10 +44,22 @@ jobs:
       - name: Align APK
         run: |
           cd app/build/outputs/apk/release
-          zipalign -v -p 4 app-release-unsigned.apk ludditeinstaller.apk
+          zipalign -v -p 4 app-release-unsigned.apk ludditeinstaller-aligned.apk
+
+      - name: Sign APK
+        run: |
+          apksigner sign --ks keystore.jks \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+            app/build/outputs/apk/release/ludditeinstaller-aligned.apk
+
+      - name: Verify APK
+        run: |
+          apksigner verify app/build/outputs/apk/release/ludditeinstaller-aligned.apk
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: app/build/outputs/apk/release/ludditeinstaller.apk
+          files: app/build/outputs/apk/release/ludditeinstaller-aligned.apk
