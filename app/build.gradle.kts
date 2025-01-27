@@ -13,6 +13,7 @@ android {
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "API_KEY", "\"${System.getenv("API_KEY") ?: ""}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -35,6 +36,7 @@ android {
     }
     buildFeatures {
         compose = true
+        android.buildFeatures.buildConfig=true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
