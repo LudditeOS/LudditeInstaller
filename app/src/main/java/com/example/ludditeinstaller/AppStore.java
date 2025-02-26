@@ -16,9 +16,19 @@ public class AppStore {
     private LogDisplay logDisplay;
     private static final String TAG = "AppStore";
     private static final String DOWNLOADS_DIR = "apk_downloads";
+    private AppStoreCallback callback;
+
+    public interface AppStoreCallback {
+        void onDownloadComplete();
+        void onDownloadFailed(String error);
+    }
 
     public AppStore(LogDisplay logDisplay) {
         this.logDisplay = logDisplay;
+    }
+
+    public void setCallback(AppStoreCallback callback) {
+        this.callback = callback;
     }
 
     public void downloadAndInstallApk(Context context, String apkUrl, String fileName) {
@@ -35,12 +45,23 @@ public class AppStore {
                     mainHandler.post(() -> {
                         logDisplay.log(TAG, "Initiating install process");
                         installApk(context, contentUri);
+                        // Notify download is complete
+                        if (callback != null) {
+                            callback.onDownloadComplete();
+                        }
                     });
                 } else {
                     logDisplay.log(TAG, "Download failed - contentUri is null");
+                    if (callback != null) {
+                        mainHandler.post(() -> callback.onDownloadFailed("Download failed - contentUri is null"));
+                    }
                 }
             } catch (Exception e) {
-                logDisplay.log(TAG, "Error in download/install process: " + e.getMessage());
+                final String errorMessage = e.getMessage();
+                logDisplay.log(TAG, "Error in download/install process: " + errorMessage);
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onDownloadFailed(errorMessage));
+                }
             }
         }).start();
     }
@@ -160,6 +181,9 @@ public class AppStore {
             context.startActivity(intent);
         } catch (Exception e) {
             logDisplay.log(TAG, "Error in installApk: " + e.getMessage());
+            if (callback != null) {
+                callback.onDownloadFailed("Error during installation: " + e.getMessage());
+            }
         }
     }
 }
