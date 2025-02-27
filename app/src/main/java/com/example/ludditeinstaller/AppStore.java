@@ -72,7 +72,18 @@ public class AppStore {
         try {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
             request.setTitle(fileName);
+
+            // Ensure the download directory exists
+            File downloadDir = context.getExternalFilesDir(DOWNLOADS_DIR);
+            if (downloadDir != null && !downloadDir.exists()) {
+                downloadDir.mkdirs();
+                logDisplay.log(TAG, "Created download directory: " + downloadDir.getAbsolutePath());
+            }
+
+            // Set the destination (external app files directory)
             request.setDestinationInExternalFilesDir(context, DOWNLOADS_DIR, fileName);
+            logDisplay.log(TAG, "Download destination: " + context.getExternalFilesDir(DOWNLOADS_DIR).getAbsolutePath() + "/" + fileName);
+
             request.setAllowedOverMetered(true);
             request.setAllowedOverRoaming(true);
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
@@ -103,7 +114,45 @@ public class AppStore {
                             if (uriIndex != -1) {
                                 String uriString = cursor.getString(uriIndex);
                                 cursor.close();
-                                return Uri.parse(uriString);
+
+                                Uri downloadedUri = Uri.parse(uriString);
+                                logDisplay.log(TAG, "Downloaded file URI: " + downloadedUri.toString());
+
+                                // If it's a content URI, try to get the actual file path
+                                if (downloadedUri.getScheme() != null && downloadedUri.getScheme().equals("content")) {
+                                    logDisplay.log(TAG, "Downloaded file is a content URI");
+
+                                    // Try to get the actual file path using the download manager
+                                    try {
+                                        DownloadManager.Query fileQuery = new DownloadManager.Query();
+                                        fileQuery.setFilterById(downloadId);
+                                        Cursor filePathCursor = dm.query(fileQuery);
+
+                                        if (filePathCursor.moveToFirst()) {
+                                            int fileNameIdx = filePathCursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_FILENAME);
+                                            if (fileNameIdx != -1) {
+                                                String filePath = filePathCursor.getString(fileNameIdx);
+                                                filePathCursor.close();
+
+                                                if (filePath != null) {
+                                                    File file = new File(filePath);
+                                                    logDisplay.log(TAG, "Actual file path: " + file.getAbsolutePath() + ", exists: " + file.exists());
+                                                    if (file.exists()) {
+                                                        return Uri.fromFile(file);
+                                                    }
+                                                }
+                                            } else {
+                                                filePathCursor.close();
+                                            }
+                                        } else {
+                                            filePathCursor.close();
+                                        }
+                                    } catch (Exception e) {
+                                        logDisplay.log(TAG, "Error getting file path: " + e.getMessage());
+                                    }
+                                }
+
+                                return downloadedUri;
                             }
                         } else if (status == DownloadManager.STATUS_FAILED) {
                             cursor.close();
@@ -169,16 +218,47 @@ public class AppStore {
 
     private void installApk(Context context, Uri fileUri) {
         try {
+            logDisplay.log(TAG, "Preparing installation from URI: " + fileUri);
             File file = new File(fileUri.getPath());
-            Uri contentUri = FileProvider.getUriForFile(context,
-                    context.getPackageName() + ".provider",
-                    file);
 
-            Intent intent = new Intent("com.luddite.app.store.INSTALL_PACKAGE");
-            intent.setDataAndType(contentUri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            logDisplay.log(TAG, "File exists: " + file.exists() + ", path: " + file.getAbsolutePath());
+
+            // Check if the file is a direct path or content URI
+            Uri contentUri;
+            if (fileUri.getScheme() != null && fileUri.getScheme().equals("content")) {
+                contentUri = fileUri;
+                logDisplay.log(TAG, "Using direct content URI: " + contentUri);
+            } else {
+                contentUri = FileProvider.getUriForFile(context,
+                        context.getPackageName() + ".provider",
+                        file);
+                logDisplay.log(TAG, "Created content URI using FileProvider: " + contentUri);
+            }
+
+            // First try the custom intent
+            try {
+                Intent customIntent = new Intent("com.luddite.app.store.INSTALL_PACKAGE");
+                customIntent.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                customIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                customIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                logDisplay.log(TAG, "Attempting to start custom intent: com.luddite.app.store.INSTALL_PACKAGE");
+                context.startActivity(customIntent);
+            } catch (Exception e) {
+                logDisplay.log(TAG, "Custom intent failed: " + e.getMessage() + ". Trying standard install intent...");
+
+                // Fallback to standard package installer
+                Intent standardIntent = new Intent(Intent.ACTION_VIEW);
+                standardIntent.setDataAndType(contentUri, "application/vnd.android.package-archive");
+                standardIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                standardIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                logDisplay.log(TAG, "Starting standard install intent: ACTION_VIEW");
+                context.startActivity(standardIntent);
+            }
+
+            // Notify completion - we consider it complete when installation dialog starts
+            if (callback != null) {
+                callback.onDownloadComplete();
+            }
         } catch (Exception e) {
             logDisplay.log(TAG, "Error in installApk: " + e.getMessage());
             if (callback != null) {

@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Allow FileProvider to serve files from the app's external files directory -->
     <external-files-path
         name="apks"
         path="apk_downloads" />
+
+    <!-- Allow access to all external storage -->
+    <external-path
+        name="external_files"
+        path="." />
+
+    <!-- Allow access to internal storage -->
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- Allow access to cache directory -->
+    <cache-path
+        name="cache"
+        path="." />
 </paths>
