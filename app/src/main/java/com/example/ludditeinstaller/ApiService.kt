@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class ApiService {
     private val apiUrl = "https://download.luddite-os.ch/api/apks"
@@ -12,7 +13,7 @@ class ApiService {
     suspend fun fetchApps(): List<ApkFile> = withContext(Dispatchers.IO) {
         try {
             val url = URL(apiUrl)
-            val connection = url.openConnection() as HttpURLConnection
+            val connection = url.openConnection() as HttpsURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("X-API-Key", BuildConfig.API_KEY)
 
