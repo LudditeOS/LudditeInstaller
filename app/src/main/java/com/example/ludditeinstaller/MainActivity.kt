@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity(), AppStore.AppStoreCallback {
     private fun updateButtons(apps: List<ApkFile>) {
         apps.forEach { app ->
             val button = Button(this).apply {
-                text = if (app.version.isNotEmpty()) "${app.name} v${app.version}" else app.name
+                text = app.name
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity(), AppStore.AppStoreCallback {
                 setOnClickListener {
                     logDisplay.log("MainActivity", "Installing ${app.name}")
                     showLoading(true)
-                    appStore.downloadAndInstallApk(context, app.downloadUrl, app.objectName)
+                    appStore.downloadAndInstallApk(context, app.downloadUrl, app.name)
                 }
             }
             buttonContainer.addView(button)

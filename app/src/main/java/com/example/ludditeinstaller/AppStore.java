@@ -31,14 +31,14 @@ public class AppStore {
         this.callback = callback;
     }
 
-    public void downloadAndInstallApk(Context context, String apkUrl, String fileName) {
+    public void downloadAndInstallApk(Context context, String apkUrl, String apkName) {
         logDisplay.log(TAG, "Starting download and install process for: " + apkUrl);
         Handler mainHandler = new Handler(context.getMainLooper());
 
         new Thread(() -> {
             try {
                 logDisplay.log(TAG, "Starting download...");
-                Uri contentUri = downloadApk(context, apkUrl, fileName);
+                Uri contentUri = downloadApk(context, apkUrl, apkName);
                 logDisplay.log(TAG, "Download completed, contentUri: " + contentUri);
 
                 if (contentUri != null) {
@@ -66,12 +66,12 @@ public class AppStore {
         }).start();
     }
 
-    private Uri downloadApk(Context context, String apkUrl, String fileName) {
+    private Uri downloadApk(Context context, String apkUrl, String apkName) {
         DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
 
         try {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
-            request.setTitle(fileName);
+            request.setTitle(apkName);
 
             // Ensure the download directory exists
             File downloadDir = context.getExternalFilesDir(DOWNLOADS_DIR);
@@ -81,8 +81,8 @@ public class AppStore {
             }
 
             // Set the destination (external app files directory)
-            request.setDestinationInExternalFilesDir(context, DOWNLOADS_DIR, fileName);
-            logDisplay.log(TAG, "Download destination: " + context.getExternalFilesDir(DOWNLOADS_DIR).getAbsolutePath() + "/" + fileName);
+            request.setDestinationInExternalFilesDir(context, DOWNLOADS_DIR, apkName);
+            logDisplay.log(TAG, "Download destination: " + context.getExternalFilesDir(DOWNLOADS_DIR).getAbsolutePath() + "/" + apkName);
 
             request.setAllowedOverMetered(true);
             request.setAllowedOverRoaming(true);

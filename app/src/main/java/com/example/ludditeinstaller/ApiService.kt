@@ -26,8 +26,6 @@ class ApiService {
                 apps.add(
                     ApkFile(
                         name = jsonObject.getString("name"),
-                        version = jsonObject.getString("version"),
-                        objectName = jsonObject.getString("objectName"),
                         downloadUrl = jsonObject.getString("downloadUrl")
                     )
                 )
