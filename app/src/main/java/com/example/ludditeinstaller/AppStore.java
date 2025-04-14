@@ -91,7 +91,7 @@ public class AppStore {
             final long downloadId = dm.enqueue(request);
             logDisplay.log(TAG, "Download started with ID: " + downloadId);
 
-            int maxAttempts = 30;
+            int maxAttempts = 60;
             int attempts = 0;
 
             while (attempts < maxAttempts) {
